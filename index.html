@@ -3,33 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login & Dashboard Supervisor - Motor Bandung</title>
+    <title>Panel Supervisor - Motor Bandung</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col justify-between p-4 md:p-8">
 
-    <!-- HALAMAN LOGIN COVER -->
+    <!-- HALAMAN LOGIN SUPERVISOR -->
     <div id="loginScreen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
             <div class="text-center mb-6">
                 <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Akses Terbatas</span>
                 <h2 class="text-2xl font-black text-slate-800 mt-2">Panel Supervisor</h2>
-                <p class="text-slate-500 text-sm mt-1">Masukkan kredensial yang valid untuk masuk.</p>
+                <p class="text-slate-500 text-sm mt-1">Masukkan kredensial supervisor untuk masuk.</p>
             </div>
             
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">User Name</label>
-                    <input type="text" id="username" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan username">
+                    <input type="text" id="username" required autocomplete="username" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan username">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Password</label>
-                    <input type="password" id="password" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan password">
+                    <input type="password" id="password" required autocomplete="current-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan password">
                 </div>
 
-                <div id="loginError" class="text-red-600 text-xs text-center hidden font-medium">
-                    User Name atau Password salah!
+                <div id="loginError" class="text-red-600 text-xs text-center hidden font-medium bg-red-50 p-2.5 rounded-lg border border-red-100">
+                    User Name atau Password salah! Periksa kembali ketikan Anda.
                 </div>
 
                 <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30 text-sm uppercase tracking-wider cursor-pointer">
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <!-- HALAMAN UTAMA DASHBOARD -->
+    <!-- HALAMAN UTAMA DASHBOARD SUPERVISOR -->
     <div id="dashboardScreen" class="max-w-7xl mx-auto w-full hidden">
         <!-- Header -->
         <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
@@ -103,8 +103,8 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            const uInput = document.getElementById('username').value;
-            const pInput = document.getElementById('password').value;
+            const uInput = document.getElementById('username').value.trim();
+            const pInput = document.getElementById('password').value.trim();
             const errorEl = document.getElementById('loginError');
 
             if (uInput === ADMIN_USER && pInput === ADMIN_PASS) {
@@ -112,6 +112,7 @@
                 showDashboard();
             } else {
                 errorEl.classList.remove('hidden');
+                document.getElementById('password').value = "";
             }
         }
 
@@ -123,19 +124,17 @@
 
         function handleLogout() {
             sessionStorage.removeItem("isLoggedIn");
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('dashboardScreen').classList.add('hidden');
-            document.getElementById('loginForm').reset();
-            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden'); // Memperbaiki bug kecil saat logout ke login screen
+            location.reload();
         }
 
         function loadData() {
             const tbody = document.getElementById('tableData');
             tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data dari server...</td></tr>`;
 
-            // Timeout penanganan agar tidak stuck loading terlalu lama
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000); // Batas 12 detik
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
 
             fetch(SCRIPT_URL, { signal: controller.signal })
                 .then(res => res.json())
@@ -155,6 +154,18 @@
                             let waLink = `https://wa.me/${cleanWa}?text=${pesanWa}`;
 
                             let badgeColor = item.rencana_pembelian === 'Cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100';
+
+                            // Menentukan warna latar belakang badge berdasarkan status FU
+                            let statusClass = "bg-slate-100 text-slate-700 border-slate-200"; // Default / Belum di-FU
+                            let currentStatus = item.status_fu ? item.status_fu.trim() : "Belum di-FU";
+
+                            if (currentStatus === "Sedang Follow Up") {
+                                statusClass = "bg-yellow-100 text-yellow-800 border-yellow-300 font-bold";
+                            } else if (currentStatus === "Jadi Beli") {
+                                statusClass = "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold";
+                            } else if (currentStatus === "Gagal") {
+                                statusClass = "bg-red-100 text-red-800 border-red-300 font-bold";
+                            }
 
                             let tr = document.createElement('tr');
                             tr.className = "hover:bg-slate-50/80 transition";
@@ -181,10 +192,11 @@
                                 </td>
                                 <td class="p-4">
                                     <div class="flex items-center gap-2">
-                                        <select id="status_${item.row_index}" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 outline-none focus:ring-2 focus:ring-red-500">
-                                            <option value="Belum di-FU" ${item.status_fu === 'Belum di-FU' ? 'selected' : ''}>Belum di-FU</option>
-                                            <option value="Sedang di-FU" ${item.status_fu === 'Sedang di-FU' ? 'selected' : ''}>Sedang di-FU</option>
-                                            <option value="Jadi / Gagal" ${item.status_fu === 'Jadi / Gagal' ? 'selected' : ''}>Jadi / Gagal</option>
+                                        <select id="status_${item.row_index}" class="text-xs ${statusClass} rounded-lg px-2.5 py-2 outline-none focus:ring-2 focus:ring-red-500 transition">
+                                            <option value="Belum di-FU" ${currentStatus === 'Belum di-FU' ? 'selected' : ''}>Belum di-FU</option>
+                                            <option value="Sedang Follow Up" ${currentStatus === 'Sedang Follow Up' ? 'selected' : ''}>Sedang Follow Up</option>
+                                            <option value="Jadi Beli" ${currentStatus === 'Jadi Beli' ? 'selected' : ''}>Jadi Beli</option>
+                                            <option value="Gagal" ${currentStatus === 'Gagal' ? 'selected' : ''}>Gagal</option>
                                         </select>
                                         <button onclick="updateStatus(${item.row_index})" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow-sm cursor-pointer">
                                             Simpan
