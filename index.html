@@ -3,12 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Supervisor & Marketing - Motor Bandung</title>
+    <title>Login & Dashboard Supervisor - Motor Bandung</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-100 font-sans min-h-screen p-4 md:p-8">
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col justify-between p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <!-- HALAMAN LOGIN COVER -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
+            <div class="text-center mb-6">
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Akses Terbatas</span>
+                <h2 class="text-2xl font-black text-slate-800 mt-3">Panel Supervisor</h2>
+                <p class="text-slate-500 text-sm mt-1">Masukkan kredensial yang valid untuk masuk.</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">User Name</label>
+                    <input type="text" id="username" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan username">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Password</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm" placeholder="Masukkan password">
+                </div>
+
+                <div id="loginError" class="text-red-600 text-xs text-center hidden font-medium">
+                    User Name atau Password salah!
+                </div>
+
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30 text-sm uppercase tracking-wider cursor-pointer">
+                    Masuk Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HALAMAN UTAMA DASHBOARD (TERSEMBUNYI SEBELUM LOGIN) -->
+    <div id="dashboardScreen" class="max-w-7xl mx-auto w-full hidden">
         <!-- Header -->
         <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
             <div>
@@ -16,9 +48,14 @@
                 <h1 class="text-2xl font-black text-slate-800 mt-2">Data Prospek Calon Pembeli</h1>
                 <p class="text-slate-500 text-sm">Kelola Follow-Up dan pantau status prospek harian.</p>
             </div>
-            <button onclick="loadData()" class="mt-4 md:mt-0 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2">
-                🔄 Refresh Data
-            </button>
+            <div class="flex items-center gap-3 mt-4 md:mt-0">
+                <button onclick="loadData()" class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2">
+                    🔄 Refresh Data
+                </button>
+                <button onclick="handleLogout()" class="bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer border border-red-200">
+                    🔒 Logout
+                </button>
+            </div>
         </div>
 
         <!-- Table Container -->
@@ -45,9 +82,53 @@
         </div>
     </div>
 
-    <!-- Script Integrasi GAS Supervisor -->
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400">
+        &copy; 2026 Motor Bandung - Secure Supervisor Panel
+    </footer>
+
+    <!-- Script Integrasi Login & GAS -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqdeNPNrqUoHRQXVQZsz7c0ko3edzX2S53km07RWjYHSnHB11yGixf74SBuvHovj6W/exec";
+
+        // SILAKAN UBAH USERNAME DAN PASSWORD DI BAWAH INI SESUAI KEINGINAN ANDA
+        const ADMIN_USER = "srisanjaya";
+        const ADMIN_PASS = "berkah";
+
+        // Cek apakah sudah pernah login sebelumnya di sesi browser ini
+        window.onload = function() {
+            if (sessionStorage.getItem("isLoggedIn") === "true") {
+                showDashboard();
+            }
+        };
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const uInput = document.getElementById('username').value;
+            const pInput = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+
+            if (uInput === ADMIN_USER && pInput === ADMIN_PASS) {
+                sessionStorage.setItem("isLoggedIn", "true");
+                showDashboard();
+            } else {
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+            loadData();
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem("isLoggedIn");
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('dashboardScreen').classList.add('hidden');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').classList.add('hidden');
+        }
 
         function loadData() {
             const tbody = document.getElementById('tableData');
@@ -138,8 +219,6 @@
                 console.error(err);
             });
         }
-
-        loadData();
     </script>
 </body>
 </html>
