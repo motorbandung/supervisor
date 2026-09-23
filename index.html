@@ -13,7 +13,7 @@
         <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
             <div class="text-center mb-6">
                 <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Akses Terbatas</span>
-                <h2 class="text-2xl font-black text-slate-800 mt-3">Panel Supervisor</h2>
+                <h2 class="text-2xl font-black text-slate-800 mt-2">Panel Supervisor</h2>
                 <p class="text-slate-500 text-sm mt-1">Masukkan kredensial yang valid untuk masuk.</p>
             </div>
             
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <!-- HALAMAN UTAMA DASHBOARD (TERSEMBUNYI SEBELUM LOGIN) -->
+    <!-- HALAMAN UTAMA DASHBOARD -->
     <div id="dashboardScreen" class="max-w-7xl mx-auto w-full hidden">
         <!-- Header -->
         <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
@@ -83,19 +83,18 @@
     </div>
 
     <!-- Footer -->
-    <footer class="text-center py-4 text-xs text-slate-400">
-        &copy; 2026 Motor Bandung - Secure Supervisor Panel
+    <footer class="w-full text-center py-6 text-xs text-slate-500 space-y-1 mt-8 border-t border-slate-200">
+        <p>Kontak WA: <a href="https://wa.me/6285222952220" target="_blank" class="text-red-600 font-semibold hover:underline">085222952220</a></p>
+        <p class="font-medium text-slate-600">Build app by :kangtamam-bdg</p>
     </footer>
 
     <!-- Script Integrasi Login & GAS -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqdeNPNrqUoHRQXVQZsz7c0ko3edzX2S53km07RWjYHSnHB11yGixf74SBuvHovj6W/exec";
 
-        // SILAKAN UBAH USERNAME DAN PASSWORD DI BAWAH INI SESUAI KEINGINAN ANDA
         const ADMIN_USER = "srisanjaya";
-        const ADMIN_PASS = "berkah";
+        const ADMIN_PASS = "berkah.";
 
-        // Cek apakah sudah pernah login sebelumnya di sesi browser ini
         window.onload = function() {
             if (sessionStorage.getItem("isLoggedIn") === "true") {
                 showDashboard();
@@ -132,11 +131,16 @@
 
         function loadData() {
             const tbody = document.getElementById('tableData');
-            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data dari server...</td></tr>`;
 
-            fetch(SCRIPT_URL)
+            // Timeout penanganan agar tidak stuck loading terlalu lama
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000); // Batas 12 detik
+
+            fetch(SCRIPT_URL, { signal: controller.signal })
                 .then(res => res.json())
                 .then(response => {
+                    clearTimeout(timeoutId);
                     if(response.status === "success") {
                         let rows = response.data;
                         if(rows.length === 0) {
@@ -193,8 +197,9 @@
                     }
                 })
                 .catch(err => {
+                    clearTimeout(timeoutId);
                     console.error(err);
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Gagal memuat data. Periksa koneksi atau URL GAS.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Gagal atau koneksi lambat memuat data. Silakan klik tombol <b>Refresh Data</b> di atas.</td></tr>`;
                 });
         }
 
