@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Supervisor & Marketing - Motor Bandung</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col md:flex-row justify-between items-center border border-slate-200">
+            <div>
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Panel Supervisor / Marketing</span>
+                <h1 class="text-2xl font-black text-slate-800 mt-2">Data Prospek Calon Pembeli</h1>
+                <p class="text-slate-500 text-sm">Kelola Follow-Up dan pantau status prospek harian.</p>
+            </div>
+            <button onclick="loadData()" class="mt-4 md:mt-0 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2">
+                🔄 Refresh Data
+            </button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 uppercase text-xs font-bold border-b border-slate-200 tracking-wider">
+                            <th class="p-4">Waktu</th>
+                            <th class="p-4">Nama & Kontak</th>
+                            <th class="p-4">Domisili / Email</th>
+                            <th class="p-4">Rencana Unit & Pembelian</th>
+                            <th class="p-4 text-center">Aksi WhatsApp</th>
+                            <th class="p-4">Status FU & Simpan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableData" class="divide-y divide-slate-100 text-slate-700">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-400">Memuat data dari server...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Integrasi GAS Supervisor -->
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqdeNPNrqUoHRQXVQZsz7c0ko3edzX2S53km07RWjYHSnHB11yGixf74SBuvHovj6W/exec";
+
+        function loadData() {
+            const tbody = document.getElementById('tableData');
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data...</td></tr>`;
+
+            fetch(SCRIPT_URL)
+                .then(res => res.json())
+                .then(response => {
+                    if(response.status === "success") {
+                        let rows = response.data;
+                        if(rows.length === 0) {
+                            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada data prospek masuk.</td></tr>`;
+                            return;
+                        }
+
+                        tbody.innerHTML = "";
+                        rows.reverse().forEach(item => {
+                            let cleanWa = item.no_wa.toString().replace(/^0/, '62').replace(/\D/g,'');
+                            let pesanWa = encodeURIComponent(`Permisi kak ${item.nama}, saya Sri Sanjaya. Akan melanjutkan proses pemilihan unit motornya (${item.merk_motor} ${item.tahun_motor} - ${item.rencana_pembelian}) di Bandung.`);
+                            let waLink = `https://wa.me/${cleanWa}?text=${pesanWa}`;
+
+                            let badgeColor = item.rencana_pembelian === 'Cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100';
+
+                            let tr = document.createElement('tr');
+                            tr.className = "hover:bg-slate-50/80 transition";
+                            tr.innerHTML = `
+                                <td class="p-4 text-xs text-slate-500 whitespace-nowrap">${new Date(item.timestamp).toLocaleString('id-ID')}</td>
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-900">${item.nama}</div>
+                                    <div class="text-xs text-slate-500 font-mono">${item.no_wa}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="text-slate-800">${item.domisili}</div>
+                                    <div class="text-xs text-slate-400">${item.email}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="font-semibold text-slate-900">${item.merk_motor} (${item.tahun_motor})</div>
+                                    <span class="inline-block mt-1 font-bold text-xs px-2 py-0.5 rounded border ${badgeColor}">
+                                        ${item.rencana_pembelian}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center">
+                                    <a href="${waLink}" target="_blank" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3 py-2 rounded-xl transition shadow-sm">
+                                        💬 Chat WA
+                                    </a>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex items-center gap-2">
+                                        <select id="status_${item.row_index}" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 outline-none focus:ring-2 focus:ring-red-500">
+                                            <option value="Belum di-FU" ${item.status_fu === 'Belum di-FU' ? 'selected' : ''}>Belum di-FU</option>
+                                            <option value="Sedang di-FU" ${item.status_fu === 'Sedang di-FU' ? 'selected' : ''}>Sedang di-FU</option>
+                                            <option value="Jadi / Gagal" ${item.status_fu === 'Jadi / Gagal' ? 'selected' : ''}>Jadi / Gagal</option>
+                                        </select>
+                                        <button onclick="updateStatus(${item.row_index})" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow-sm cursor-pointer">
+                                            Simpan
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Gagal memuat data. Periksa koneksi atau URL GAS.</td></tr>`;
+                });
+        }
+
+        function updateStatus(rowIndex) {
+            let statusVal = document.getElementById(`status_${rowIndex}`).value;
+            let payload = {
+                action: "update_status",
+                row_index: rowIndex,
+                status_fu: statusVal
+            };
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                alert("Status FU berhasil diperbarui & disimpan ke pusat!");
+                loadData();
+            }).catch(err => {
+                alert("Gagal memperbarui status.");
+                console.error(err);
+            });
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
