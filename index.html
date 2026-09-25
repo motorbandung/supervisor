@@ -32,7 +32,7 @@
                     User Name atau Password salah! Periksa kembali ketikan Anda.
                 </div>
 
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30 text-sm uppercase tracking-wider cursor-pointer">
+                <button type="submit" id="loginBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30 text-sm uppercase tracking-wider cursor-pointer">
                     Masuk Dashboard
                 </button>
             </form>
@@ -92,27 +92,49 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqdeNPNrqUoHRQXVQZsz7c0ko3edzX2S53km07RWjYHSnHB11yGixf74SBuvHovj6W/exec";
 
-        const ADMIN_USER = "******";
-        const ADMIN_PASS = "**********";
-
         window.onload = function() {
             if (sessionStorage.getItem("isLoggedIn") === "true") {
                 showDashboard();
             }
         };
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const uInput = document.getElementById('username').value.trim();
             const pInput = document.getElementById('password').value.trim();
             const errorEl = document.getElementById('loginError');
+            const loginBtn = document.getElementById('loginBtn');
 
-            if (uInput === ADMIN_USER && pInput === ADMIN_PASS) {
-                sessionStorage.setItem("isLoggedIn", "true");
-                showDashboard();
-            } else {
-                errorEl.classList.remove('hidden');
-                document.getElementById('password').value = "";
+            errorEl.classList.add('hidden');
+            loginBtn.innerText = "Memeriksa...";
+            loginBtn.disabled = true;
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: "login",
+                        username: uInput,
+                        password: pInput
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    sessionStorage.setItem("isLoggedIn", "true");
+                    showDashboard();
+                } else {
+                    errorEl.classList.remove('hidden');
+                    document.getElementById('password').value = "";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Gagal terhubung ke server. Periksa koneksi internet Anda.");
+            } finally {
+                loginBtn.innerText = "Masuk Dashboard";
+                loginBtn.disabled = false;
             }
         }
 
@@ -124,8 +146,6 @@
 
         function handleLogout() {
             sessionStorage.removeItem("isLoggedIn");
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('dashboardScreen').classList.remove('hidden'); // Memperbaiki bug kecil saat logout ke login screen
             location.reload();
         }
 
@@ -155,8 +175,7 @@
 
                             let badgeColor = item.rencana_pembelian === 'Cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100';
 
-                            // Menentukan warna latar belakang badge berdasarkan status FU
-                            let statusClass = "bg-slate-100 text-slate-700 border-slate-200"; // Default / Belum di-FU
+                            let statusClass = "bg-slate-100 text-slate-700 border-slate-200";
                             let currentStatus = item.status_fu ? item.status_fu.trim() : "Belum di-FU";
 
                             if (currentStatus === "Sedang Follow Up") {
@@ -225,8 +244,7 @@
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             }).then(() => {
                 alert("Status FU berhasil diperbarui & disimpan ke pusat!");
